@@ -1,0 +1,114 @@
+---
+title: 'Lab 4: Healthy Momma, Healthy Baby'
+author: "Krist Mar and Nikki Haas"
+date: "12/1/2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### A Nice Introduction that Makes Us Sound Like Pros
+
+All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl. All work and no play makes Nikki a dull girl. All work and no play makes Nikki a dull girl. All work and no play makes Nikki a dull girl. All work and no play makes Nikki a dull girl. All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.
+
+
+### Step 1: Read in the Data
+
+```{r}
+setwd('/Users/nicholeh/student285/w203/lab_4/Lab_4')
+load('bwght_w203.RData')
+desc
+```
+
+### Step 2: Exploratory Data Analysis
+
+First, get summary statistics on each element of the dataset:
+
+
+```{r}
+nrow(data)
+
+summary(data)
+
+
+```
+
+
+##### *Response Variables*
+
+The bwght, lbwght, omaps and fmaps variables are related to the health of the baby.
+
+The first thing to check is if these variables are collinar.  We will omit lbwghts as that is a function of bwghts.
+
+```{r}
+library(ggplot2)
+cor(data$omaps, data$fmaps, use = "complete.obs")
+cor(data$lbwght, data$fmaps, use = "complete.obs")
+p <- ggplot(data, aes(lbwght, omaps)) + geom_point(size = 0.25) + 
+  geom_smooth(method = "lm", se = FALSE) + geom_point(aes(colour = fmaps)) 
+p
+```
+
+
+```{r}
+p <- ggplot(data, aes(factor(fmaps), lbwght)) + geom_boxplot() 
+p
+```
+
+
+Looking at the data, we can be reasonably assured that the response variables are related, but not collinear. It may be best to make a combined variable of `fmaps` and `omaps` such as `mapscombined = fmaps + omaps`.  The difference would not make much sense compared to the sum; 10 - 10 and 2 - 2 are both zero, after all.  
+
+
+##### *Regressors*
+
+The variables monpre and npvis are related to the prenatal care given during pregnancy.  Let us review them for collinearity:
+```{r}
+cor(data$npvis, data$monpre, use = "complete.obs")
+ggplot(data, aes(monpre, npvis)) + geom_point(size = 0.25) + 
+  geom_smooth(method = "lm", se = FALSE) + geom_jitter()
+ggplot(data, aes(factor(monpre), npvis)) + geom_boxplot() 
+```
+
+From this set, we can see that the data is not collinear, and indeed we can see that we might have some reporting errors.  5 mothers are listed as starting prenatal care in month 0 of their pregnancy, but they visited the doctor 0 times.  These probably denote missing information or an error in reporting.  Unfortunately, this data does show a definitive downward trend leading us to suspect that the number of visits is a function of month prenatal care began.  This makes sense intuitively; if a mother starts prenatal care in her 2nd month of pregnancy, she has ample time for frequent doctor visits.  However, if she starts her prenatal care towards the end of her pregnancy, she does not have enough time to visit the doctor as often as a woman who started in month 2.
+
+```{r}
+ggplot(data, aes(x=monpre)) + geom_histogram(aes(y = ..count..),bins = 10) +
+  ggtitle("Month Prenatal Care began") 
+ggplot(data, aes(x=sqrt(monpre))) + geom_histogram(aes(y = ..count..), bins = 10) + 
+  ggtitle("Month Prenatal Care Began, Half Power")
+ggplot(data, aes(x=log(monpre))) + geom_histogram(aes(y = ..count..), bins = 10) + 
+  ggtitle("Month Prenatal Care Began, Natural Log")
+ggplot(data, aes(x=(monpre^2))) + geom_histogram(aes(y = ..count..), bins = 10) +
+  ggtitle("Month Prenatal Care Began, Square Power")
+ggplot(data, aes(x=npvis)) + geom_histogram(aes(y = ..count..), bins = 15) + 
+  ggtitle("Number of Prenatal Visits")
+```
+
+Look at the extreme fmops case
+```{r}
+data[data$fmaps< 4,]
+```
+
+
+All in all, the number of visits follows a mostly normal curve, and the square root of the month prenatal care began follow a mostly normal curve.  Then we say smart things about how that will all relate to each other.
+
+### Step 3: Modeling 
+
+
+### Step 4: CLM and the Models
+
+
+### Step 5: Regression Tables and Model Analysis
+
+### Step 6: Causality
+
+
+### Biases and Limitation
+
+This data is extremely biased in that no still births were included in our dataset.  It is a sad fact in the United States that over 2 in 1,000 births are [stillbirths](https://www.washingtonpost.com/news/wonk/wp/2014/09/29/our-infant-mortality-rate-is-a-national-embarrassment/?utm_term=.58dedfd178fd).  Since we do not know the prenatal care data for stillbirths, we cannot completely guage how much prenatal care contributes to a child's health at birth.
+
+### Step 7: Conclusion
+
+
+
