@@ -16,8 +16,7 @@ All work and no play makes Nikki a dull girl.  All work and no play makes Nikki 
 ### Step 1: Read in the Data
 
 ```{r}
-setwd('/Users/nicholeh/student285/w203/lab_4/Lab_4')
-load('bwght_w203.RData')
+load('/Users/nicholeh/student285/w203/w203_lab_4/bwght_w203.RData')
 desc
 ```
 
@@ -95,6 +94,20 @@ All in all, the number of visits follows a mostly normal curve, and the square r
 
 ### Step 3: Modeling 
 
+```{r}
+model1 = lm(data$bwght ~ data$monpre + data$npvis)
+model1
+model2 = lm(data$lbwght ~ data$monpre + data$npvis)
+model2
+model3 = lm(data$bwght ~ sqrt(data$monpre) + data$npvis)
+model3
+model4 = lm(data$lbwght ~ sqrt(data$monpre) + data$npvis)
+model4
+AIC(model1)
+AIC(model2)
+AIC(model3)
+AIC(model4)
+```
 
 ### Step 4: CLM and the Models
 
@@ -107,6 +120,8 @@ All in all, the number of visits follows a mostly normal curve, and the square r
 ### Biases and Limitation
 
 This data is extremely biased in that no still births were included in our dataset.  It is a sad fact in the United States that over 2 in 1,000 births are [stillbirths](https://www.washingtonpost.com/news/wonk/wp/2014/09/29/our-infant-mortality-rate-is-a-national-embarrassment/?utm_term=.58dedfd178fd).  Since we do not know the prenatal care data for stillbirths, we cannot completely guage how much prenatal care contributes to a child's health at birth.
+
+In addition, it appears that there is little correlation between the Apgar score and the later health of the baby.  The Apar is only meant to be used in the context of emergency situations.  In this manner, looking at a baby's weight will give us deeper insight into the baby's overall health.
 
 ### Step 7: Conclusion
 
