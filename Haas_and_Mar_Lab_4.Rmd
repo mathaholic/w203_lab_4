@@ -1,6 +1,6 @@
 ---
 title: 'Lab 4: Healthy Momma, Healthy Baby'
-author: "Krist Mar and Nikki Haas"
+author: "Krista Mar and Nikki Haas"
 date: "12/1/2016"
 output: pdf_document
 ---
@@ -38,14 +38,16 @@ summary(data)
 
 The bwght, lbwght, omaps and fmaps variables are related to the health of the baby.
 
-The first thing to check is if these variables are collinar.  We will omit lbwghts as that is a function of bwghts.
+The first thing to check is if these variables are collinar.  We will omit bwghts as that is a function of lbwghts.
 
 ```{r}
 library(ggplot2)
 cor(data$omaps, data$fmaps, use = "complete.obs")
 cor(data$lbwght, data$fmaps, use = "complete.obs")
-p <- ggplot(data, aes(lbwght, omaps)) + geom_point(size = 0.25) + 
-  geom_smooth(method = "lm", se = FALSE) + geom_point(aes(colour = fmaps)) 
+p <- ggplot(data, aes(omaps, lbwght)) + geom_point(size = 0.25) + 
+  geom_smooth(method = "lm", se = FALSE) + geom_point(aes(colour = fmaps)) +
+  ggtitle("Scatterplot of log(weight) against One Minute APGAR test,\n
+          with 5 minute APGAR test heatmap")
 p
 ```
 
@@ -53,6 +55,12 @@ p
 ```{r}
 p <- ggplot(data, aes(factor(fmaps), lbwght)) + geom_boxplot() 
 p
+```
+
+
+Look at the extreme fmops case
+```{r}
+data[data$fmaps< 4,]
 ```
 
 
@@ -74,7 +82,7 @@ From this set, we can see that the data is not collinear, and indeed we can see 
 ```{r}
 ggplot(data, aes(x=monpre)) + geom_histogram(aes(y = ..count..),bins = 10) +
   ggtitle("Month Prenatal Care began") 
-ggplot(data, aes(x=sqrt(monpre))) + geom_histogram(aes(y = ..count..), bins = 10) + 
+ggplot(data, aes(x=sqrt(monpre))) + geom_histogram(aes(y = ..count..), bins = 10) +
   ggtitle("Month Prenatal Care Began, Half Power")
 ggplot(data, aes(x=log(monpre))) + geom_histogram(aes(y = ..count..), bins = 10) + 
   ggtitle("Month Prenatal Care Began, Natural Log")
@@ -84,16 +92,15 @@ ggplot(data, aes(x=npvis)) + geom_histogram(aes(y = ..count..), bins = 15) +
   ggtitle("Number of Prenatal Visits")
 ```
 
-Look at the extreme fmops case
-```{r}
-data[data$fmaps< 4,]
-```
 
 
 All in all, the number of visits follows a mostly normal curve, and the square root of the month prenatal care began follow a mostly normal curve.  Then we say smart things about how that will all relate to each other.
 
+
 ### Step 3: Modeling 
 
+
+First we will check variants on the requested model; baby health as a function of the mother's prenatal care.  We will not 
 ```{r}
 model1 = lm(data$bwght ~ data$monpre + data$npvis)
 model1
@@ -107,6 +114,89 @@ AIC(model1)
 AIC(model2)
 AIC(model3)
 AIC(model4)
+```
+
+##### Model 2:An Alternate Main Model
+
+The 1 minute and 5 minute APGAR scores on their own do not tell us much. As we can see from the heatmap on the first scatterplot, a baby who has a low one minute score tends to have a higher five minute score.  There are very few examples of a baby having a worse five minute score than a one minute score:
+
+```{r}
+nrow(data[!is.na(data$fmaps) < !is.na(data$omaps),])
+```
+
+However, we can get some information if we sum up `omaps` and `fmaps`.  A baby that goes from 0 to 10 then would have an overal low score compared to a baby who started with a score of 10 and was still at 10 5 minutes later.
+
+```{r}
+data$combinded_apgarscores = data$omaps + data$fmaps
+```
+
+Now that we have a calculated field that sums up the APGAR tests, we can try an alternate linear model:
+
+```{r}
+a1 = lm(data$combinded_apgarscores ~ data$monpre + data$npvis)
+a1
+a2 = lm(data$combinded_apgarscores ~ data$monpre)
+a3 = lm(data$combinded_apgarscores ~  data$npvis)
+summary(a1)
+AIC(a1)
+AIC(a2)
+AIC(a3)
+```
+
+Our AIC scores tell us that a1 is efficient than the other three, so let us exlore a1 further:
+
+```{r}
+plot(a1)
+```
+
+But there is quite a bit of clustering in this dataset's values.  Let's try a log transform:
+
+```{r}
+a4 = lm(log(data$combinded_apgarscores) ~ data$monpre + data$npvis)
+summary (a4)
+AIC(a4)
+plot(a4)
+
+```
+
+Again, we did't get very good results.  We cannot look at the logs of monpre or npvis as they contain some zero values, and we suspect those datapoints are important as they appear to represent mothers who had no prenatal care.  Instead, let us try the product of the APGAR scores.
+
+```{r}
+data$product_apgarscores = data$omaps * data$fmaps
+
+```
+
+```{r}
+a5 = lm(data$product_apgarscores ~ data$monpre + data$npvis)
+summary(a5)
+AIC(a5)
+plot(a5)
+
+```
+
+This data is not looking good either. Let's try removing the non-normally distributed `data$monpre` field
+
+```{r}
+a6 = lm(data$product_apgarscores ~ data$npvis)
+summary(a6)
+AIC(a6)
+plot(a6)
+```
+
+Unfortunately that too is a little worse.  Let's try normalizing these calculated values:
+
+```{r}
+data$normalized_combined_apgar = (data$combinded_apgarscores - mean(!is.na(data$combinded_apgarscores)))/sd(!is.na(data$combinded_apgarscores))
+data$normalized_product_apgar =  (data$product_apgarscores- mean(!is.na(data$product_apgarscores)))/sd(!is.na(data$product_apgarscores))
+
+a7 = lm(data$normalized_combined_apgar~data$monpre + data$npvis)
+a8 =lm(data$normalized_product_apgar~data$monpre + data$npvis)
+summary(a7)
+summary(a8)
+a9 = lm(data$normalized_combined_apgar~ data$npvis)
+a10 = a8 =lm(data$normalized_product_apgar~ data$npvis)
+summary(a9)
+summary(a10)
 ```
 
 ### Step 4: CLM and the Models
