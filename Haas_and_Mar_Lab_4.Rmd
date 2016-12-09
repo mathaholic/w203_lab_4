@@ -11,7 +11,13 @@ knitr::opts_chunk$set(echo = TRUE)
 ### A Nice Introduction that Makes Us Sound Like Pros
 
 
-All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl. All work and no play makes Nikki a dull girl. All work and no play makes Nikki a dull girl. All work and no play makes Nikki a dull girl. All work and no play makes Nikki a dull girl. All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.  All work and no play makes Nikki a dull girl.
+According to the NIH, having a healthy pregancy is one of the best ways to promote a healthy birth and that getting early and regular prenatal care improves the chances of a healthy pregnancy.[1] According to Hack et all, while most low birth weight children will end up having normal outcomes, as a group they generally have more health issues than healthy weight babies[2].
+
+Using data from the National Center for Health Statistics and from birth certificates, we will look at the impact of prenatal health care on health outcomes for newborn infants.
+
+According to Montgomery, the Apgar scores are used as an evaluative measure to see if a newborn needs immediate attention. However, the using Apgar scores to attempt to predict long-term developmental outcomes of infants in not appropriates, so we will not be using Apgar scores in our outcome variable for newborn health. [3]
+
+Therefore we will use birthweight as our outcome variable for our analysis based on historical research because of the limitations of our dataset.
 
 Something about higher birthweight that talks about neural development [big babies, big brains](http://sciencenordic.com/birth-weight-predicts-brain-development)
 
@@ -103,20 +109,51 @@ All in all, the number of visits follows a mostly normal curve, and the square r
 
 ##### Model 1: Basic Linear Model
 
-First we will check variants on the requested model; baby health as a function of the mother's prenatal care.  We will not 
 ```{r}
-model1 = lm(data$bwght ~ data$monpre + data$npvis)
-model1
-model2 = lm(data$lbwght ~ data$monpre + data$npvis)
-model2
-model3 = lm(data$bwght ~ sqrt(data$monpre) + data$npvis)
-model3
-model4 = lm(data$lbwght ~ sqrt(data$monpre) + data$npvis)
-model4
-AIC(model1)
-AIC(model2)
-AIC(model3)
-AIC(model4)
+model1<-lm(bwght ~ monpre + npvis, data = data)
+summary(model1)$r.squared
+```
+6 CLM assumptions: 
+
+1) Linearity in parameters: We can assume this.
+
+2) Random sampling of data: Not random because are not including still births or miscarriages.
+
+3) No perfect co-linearity
+
+```{r}
+cor(data$monpre, data$npvis, use="complete.obs")
+```
+There is no perfect multicolineraity between our variables. With a correlation of -0.3061006, this shows that the number of prenatal visits is moderately negatively correlated to the month in whcih prenatal care started.
+
+4) Zero conditional mean
+
+```{r}
+plot(model1, which=1)
+```
+
+Looking at the Residuals vs. Fitted plot shows that the zero conditional mean is met because the red line is approximately at 0.
+
+5) Homoskedacity of errors
+
+From the residuals vs. fitted plot, we can see that we do not have homoskedacity of erorrs because the data is not in an even band across the plot. This means that we'll have to white standard errors, which are roboust to heteroskadacity.
+
+6) Errors are normally distributed
+
+```{r}
+par(mar = rep(2, 4))
+plot(model1, which=2)
+shapiro.test(model1$residuals)
+```
+
+Checking the normal Q-Q plot, it looks like our errors are roughly normally distributed.
+
+Using the shapiro wilke test, we can reject the null hypothesis that the population has a normal distribution.
+
+```{r}
+library(lmtest)
+library(sandwich)
+coeftest(model1, vcov = vcovHC)
 ```
 
 ##### Model 2: An Alternate Main Model
@@ -127,71 +164,119 @@ The 1 minute and 5 minute APGAR scores on their own do not tell us much. As we c
 nrow(data[!is.na(data$fmaps) < !is.na(data$omaps),])
 ```
 
-However, we can get some information if we sum up `omaps` and `fmaps`.  A baby that goes from 0 to 10 then would have an overal low score compared to a baby who started with a score of 10 and was still at 10 5 minutes later.
-
-```{r}
-data$combinded_apgarscores = data$omaps + data$fmaps
-```
-
-Now that we have a calculated field that sums up the APGAR tests, we can try an alternate linear model:
-
-```{r}
-a1 = lm(data$combinded_apgarscores ~ data$monpre + data$npvis)
-a3 = lm(data$combinded_apgarscores ~  data$npvis)
-summary(a1)
-summary(a3)
-AIC(a1)
-AIC(a3)
-```
-
-Our AIC scores tell us that a1 more efficient, so let us exlore a1 further:
-
-```{r}
-plot(a1)
-```
+However, we can get some information if we take the product of `omaps` and `fmaps` and then normalize it.  A baby that goes from 0 to 10 then would have an overal low score compared to a baby who started with a score of 10 and was still at 10 5 minutes later, so the difference doesn't make sense.
 
 
 ```{r}
 data$product_apgarscores = data$omaps * data$fmaps
-
-```
-
-```{r}
-a5 = lm(data$product_apgarscores ~ data$monpre + data$npvis)
-summary(a5)
-AIC(a5)
-plot(a5)
-
-```
-
-This data is not looking good either. Let's try removing the non-normally distributed `data$monpre` field
-
-```{r}
-a6 = lm(data$product_apgarscores ~ data$npvis)
-summary(a6)
-AIC(a6)
-plot(a6)
-```
-
-Unfortunately that too is a little worse.  Let's try normalizing these calculated values:
-
-```{r}
-data$normalized_combined_apgar = (data$combinded_apgarscores - mean(!is.na(data$combinded_apgarscores)))/sd(!is.na(data$combinded_apgarscores))
 data$normalized_product_apgar =  (data$product_apgarscores- mean(!is.na(data$product_apgarscores)))/sd(!is.na(data$product_apgarscores))
 
-a7 = lm(data$normalized_combined_apgar~data$monpre + data$npvis)
-a8 =lm(data$normalized_product_apgar~data$monpre + data$npvis)
-summary(a7)
-summary(a8)
+a8 = lm(data$normalized_product_apgar~data$monpre + data$npvis)
+a9 = lm(data$normalized_product_apgar~ data$npvis)
+
+AIC(a8)
+AIC(a9)
 ```
 
 
-We did not see very good results with the APGAR score variations, so now let's try to normalize the baby's birth weight by APGAR.
+Model a8 has a nominally lower AIC score, so let's continue on with that one.
+
+```{r}
+summary(a8)
+plot(a8)
+```
+
+We did not see very good results with the APGAR score variations, but as discussed in the introduction, we were expecting the baby's birth weight would have a better indication.
+
+6 CLM assumptions: 
+
+1) Linearity in parameters: We can assume this.
+
+2) Random sampling of data: This data is not random because stillbirths are omitted.
+
+3) No perfect co-linearity
+
+As previously stated, our regressors do not have perfect collinearity.
+
+4) Zero conditional mean
 
 
-#### Model 4: Problematic covariants
+Looking at the Residuals vs. Fitted plot above shows that the zero conditional mean is met because the red line is approximately at 0 and has very little curvature.
 
-We will select the attributes of baby's gender and parent's race as well.  In the United States, it is a sad fact that minorities such as African Americans do not have adequate access to proper health care as often as non-minorities.  Their babies might not fare as well, and their mothers may not get the proper prenatal care. 
+5) Homoskedacity of errors
+
+From the residuals vs. fitted plot, we can see that we do not have homoskedacity of erorrs because the data is not in an even band across the plot. This means that we'll have to use white standard errors, which are roboust to heteroskadacity.
+
+6) Errors are normally distributed
+
+```{r}
+par(mar = rep(2, 4))
+shapiro.test(a8$residuals)
+```
+
+From normal Q-Q plot, it looks like our errors are roughly normally distributed except at the very highest and very lowest percentiles.  This is to be expected in a dataset such as this.
+
+Using the shapiro wilke test, we can reject the null hypothesis that the population has a normal distribution.
+
+```{r}
+library(lmtest)
+library(sandwich)
+coeftest(a8, vcov = vcovHC)
+```
+
+##### Model 3: Unbiased Covariants
+
+```{r}
+model3<-lm(bwght ~ monpre + npvis + cigs + drink + mage + male, data = data)
+```
+6 CLM assumptions: 
+
+1) Linearity in parameters: We can assume this.
+
+2) Random sampling of data: This data is not random because stillbirths are omitted.
+
+3) No perfect co-linearity:  As previously stated, our regressors do not have perfect collinearity.
+
+```{r}
+cor(data[,c('monpre', 'npvis', 'cigs', 'drink', 'mage', 'male')], use="complete.obs")
+```
+
+
+4) Zero conditional mean
+
+```{r}
+plot(model3, which=1)
+```
+Looking at the Residuals vs. Fitted plot shows that the zero conditional mean is met because the red line is approximately at 0.
+
+5) Homoskedacity of errors
+
+From the residuals vs. fitted plot, we can see that we do not have homoskedacity of erorrs because the data is not in an even band across the plot. This means that we'll have to white standard errors, which are roboust to heteroskadacity.
+
+6) Errors are normally distributed
+
+```{r}
+par(mar = rep(2, 4))
+plot(model3, which=2)
+shapiro.test(model3$residuals)
+```
+Checking the normal Q-Q plot, it looks like our errors are roughly normally distributed.
+
+Using the shapiro wilke test, we can reject the null hypothesis that the population has a normal distribution.
+
+```{r}
+coeftest(model1, vcov=vcovHC)
+coeftest(model3, vcov=vcovHC)
+AIC(model1)
+AIC(model3)
+```
+
+
+#### Model 4: Problematic Covariants
+
+We will select the attributes of baby's gender and parent's race as well.  In the United States, it is a sad fact that minorities such as African Americans do not have adequate access to proper health care as often as non-minorities.  Their babies might not fare as well, and their mothers may not get the proper prenatal care.  
+
+From all of the summaries, we can tell that the t-statistic for the `monpre` variable is not significant.  Thus, we cannot trust this particular regressor, and will omit it from this test.
 
 ```{r}
 c1 = lm(data$bwght ~ data$npvis + data$male +
@@ -201,7 +286,46 @@ AIC(c1)
 plot(c1)
 ```
 
-From all of the summaries, we can tell that the t-statistic for the `monpre` variable is not significant.  Thus, we cannot trust this particular regressor, as the summary statistics on this regressor suggested.
+
+6 CLM assumptions: 
+
+1) Linearity in parameters: We can assume this.
+
+2) Random sampling of data: This data is not random because stillbirths are omitted.
+
+3) No perfect co-linearity in regressors:
+
+```{r}
+cor(data[,c('npvis', 'mblck', 'fblck', 'male')], use="complete.obs")
+```
+As previously stated, our regressors do not have perfect collinearity.
+
+4) Zero conditional mean
+
+Looking at the Residuals vs. Fitted plot above shows that the zero conditional mean has not been met because the red line shows curvature for larger babies.
+
+5) Homoskedacity of errors
+
+From the residuals vs. fitted plot, we can see that we do not have homoskedacity of erorrs because the data is not in an even band across the plot. This means that we'll have to use white standard errors, which are roboust to heteroskadacity.
+
+6) Errors are normally distributed
+
+```{r}
+par(mar = rep(2, 4))
+shapiro.test(c1$residuals)
+```
+
+From normal Q-Q plot, it looks like our errors are roughly normally distributed except at the very lowest percentiles.  This is to be expected in a dataset such as this.
+
+Using the shapiro wilke test, we can reject the null hypothesis that the population has a normal distribution.
+
+```{r}
+library(lmtest)
+library(sandwich)
+coeftest(c1, vcov = vcovHC)
+```
+
+As we were hoping with such biased data, we can see that the race of the parents is not statistically significant so it is inappropriate to include it in our model.
 
 ### Step 4: CLM and the Models
 
@@ -210,17 +334,38 @@ From all of the summaries, we can tell that the t-statistic for the `monpre` var
 
 ### Step 6: Causality
 
+We choose to operationalize infant health by birthweight. There are many other factors that influence birthweight that are not captured in this data set, which leads to omitted variable bias.
+
+1) Mother's weight is a strong predictor for newborn weight.
+
+2) Socioeconomic status of mother.
+
+3) Having more than one baby at a time reduces the weight of each baby. (E.g. twins will be smaller)
+
+4)
 
 ### Biases and Limitation
 
-This data is extremely biased in that no still births were included in our dataset.  It is a sad fact in the United States that over 2 in 1,000 births are [stillbirths](https://www.washingtonpost.com/news/wonk/wp/2014/09/29/our-infant-mortality-rate-is-a-national-embarrassment/?utm_term=.58dedfd178fd).  Since we do not know the prenatal care data for stillbirths, we cannot completely guage how much prenatal care contributes to a child's health at birth.
+This data is extremely biased in that no still births were included in our dataset.  It is a sad fact in the United States that over 2 in 1,000 births are stillbirths[5].  Since we do not know the prenatal care data for stillbirths, we cannot completely guage how much prenatal care contributes to a child's health at birth.
 
 
 In addition, it appears that there is little correlation between the Apgar score and the later health of the baby.  The Apar is only meant to be used in the context of emergency situations.  In this manner, looking at a baby's weight will give us deeper insight into the baby's overall health.
 
+No miscarriages were included in the data, so this further biases our data.
 
+Using birthweight as a proxy for infant health was the best that we could do given our data set, but is by no means a comprehensive view on an infants' health.
 
 ### Step 7: Conclusion
 
+Prenatal care, as shown by number of prenatal care visits has a positive impact on birthweight. Other explanatory factors are mother's cig consumption, which has a negative impact on birthweigth. Being male has a positive impact on birthweight.
 
+References
 
+[1]https://www.nichd.nih.gov/health/topics/pregnancy/conditioninfo/pages/prenatal-care.aspx
+
+[2]https://www.ncbi.nlm.nih.gov/pubmed/7543353
+
+[3]https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1595023/
+[4]http://ije.oxfordjournals.org/content/30/6/1233.long
+
+[5]https://www.washingtonpost.com/news/wonk/wp/2014/09/29/our-infant-mortality-rate-is-a-national-embarrassment/?utm_term=.58dedfd178fd
