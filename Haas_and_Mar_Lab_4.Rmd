@@ -99,6 +99,7 @@ All in all, the number of visits follows a mostly normal curve, and the square r
 
 ### Step 3: Modeling 
 
+##### Model 1: Basic Linear Model
 
 First we will check variants on the requested model; baby health as a function of the mother's prenatal care.  We will not 
 ```{r}
@@ -116,7 +117,7 @@ AIC(model3)
 AIC(model4)
 ```
 
-##### Model 2:An Alternate Main Model
+##### Model 2: An Alternate Main Model
 
 The 1 minute and 5 minute APGAR scores on their own do not tell us much. As we can see from the heatmap on the first scatterplot, a baby who has a low one minute score tends to have a higher five minute score.  There are very few examples of a baby having a worse five minute score than a one minute score:
 
@@ -194,10 +195,50 @@ a8 =lm(data$normalized_product_apgar~data$monpre + data$npvis)
 summary(a7)
 summary(a8)
 a9 = lm(data$normalized_combined_apgar~ data$npvis)
-a10 = a8 =lm(data$normalized_product_apgar~ data$npvis)
+a10 =lm(data$normalized_product_apgar~ data$npvis)
 summary(a9)
 summary(a10)
 ```
+
+
+We did not see very good results with the APGAR score variations, so now let's try to normalize the baby's birth weight by APGAR.
+
+```{r}
+data$weight_apgar_ratio = data$bwght/data$combinded_apgarscores
+a11 = lm(data$weight_apgar_ratio ~ data$npvis )
+a12 = lm(data$weight_apgar_ratio ~ data$npvis + data$monpre)
+summary(a11)
+summary(a12)
+AIC(a11)
+AIC(a12)
+```
+
+
+```{r}
+###these exclude NaN and Infs are not working :(
+#data$weight_apgar_prod_ratio = data$bwght/data$product_apgarscores
+#a13 = lm(data$weight_apgar_prod_ratio ~ data$npvis,na.action = NULL, singular.ok = #TRUE)
+#a14 = lm(data$weight_apgar_prod_ratio ~ data$npvis + data$monpre, na.exclude(data), #singular.ok = TRUE)
+#summary(a13)
+#summary(a14)
+#AIC(a13)
+#AIC(a14)
+
+#p <- ggplot(a14, aes(a14$residuals, a14$fitted)) + geom_point(size = 0.25) + 
+#  geom_smooth(method = "lm", se = FALSE)  +
+#  ggtitle("Resid vs Fitted")
+```
+
+#### Model 4: Problematic covariants
+
+```{r}
+c1 = lm(data$lbwght ~ data$monpre + data$npvis + data$male +
+          data$mwhte + data$fblck)
+summary(c1)
+plot(c1)
+```
+
+From all of the summaries, we can tell that the t-statistic for the `monpre` variable is not significant.  Thus, we cannot trust this particular regressor, as the summary statistics on this regressor suggested.
 
 ### Step 4: CLM and the Models
 
