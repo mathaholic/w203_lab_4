@@ -332,6 +332,32 @@ As we were hoping with such biased data, we can see that the race of the parents
 
 ### Step 5: Regression Tables and Model Analysis
 
+```{r, results='asis'}
+library(stargazer)
+
+se.model1 = sqrt(diag(vcovHC(model1)))
+se.a8 = sqrt(diag(vcovHC(a8)))
+se.model3 = sqrt(diag(vcovHC(model3)))
+se.c1 = sqrt(diag(vcovHC(c1)))
+
+stargazer(model1,a8,model3,c1, type = "latex", omit.stat = "f", 
+          se = list(se.model1, se.a8, se.model3, se.c1),
+          star.cutoffs = c(0.05, 0.01, 0.001),
+          table.placement = '!h')
+```
+
+See table 1 on the next page.
+
+```{r}
+AIC(model1)
+AIC(model3)
+AIC(c1)
+```
+
+From the Akaike Information Criterion test, we see that `model3` is the best option for a linear model predicting the health of the baby.  Model3 has the highest adjusted R^2, showing that virutally 2% of all variability in the baby's health indicators can be determined by the months prenatal visits started, number of prenatal visits, the mother's smoking and driking habits, the mother's age, and the baby's gender.  As always, `monpre` was not a statistically significant regressor, and neither was the mother's age or drinking habits.  In words, we can say if the baby is a boy we can expect he will weigh 80.937 grams more than if he is a girl, for every year older his mother is, he will weight 5.317 grams more, for every alcoholic drink his mother inbibes per week he will weigh 14.050 grams less, for every cigarette his mother smokes per day, he will weigh 11.229 grams less, for each prenatal visit, he will weight 15.505 more, and for each month the mother waits to to start her prenatal care, the baby weight 20.901 grams more.  Just writing it out like that gives us good grounds to completely ignore the `monpre` variable.  
+
+\pagebreak
+
 ### Step 6: Causality
 
 We choose to operationalize infant health by birthweight. There are many other factors that influence birthweight that are not captured in this data set, which leads to omitted variable bias.
