@@ -287,6 +287,7 @@ From all of the summaries, we can tell that the t-statistic for the `monpre` var
 ```{r}
 c1 = lm(data$bwght ~ data$npvis + data$male +
           data$mblck + data$fblck)
+
 summary(c1)
 AIC(c1)
 plot(c1)
