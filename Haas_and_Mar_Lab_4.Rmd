@@ -66,7 +66,7 @@ p
 ```
 
 
-Look at the extreme fmops case
+Look at the extreme fmaps case
 ```{r}
 data[data$fmaps< 4,]
 ```
@@ -98,11 +98,15 @@ ggplot(data, aes(x=(monpre^2))) + geom_histogram(aes(y = ..count..), bins = 10) 
   ggtitle("Month Prenatal Care Began, Square Power")
 ggplot(data, aes(x=npvis)) + geom_histogram(aes(y = ..count..), bins = 15) + 
   ggtitle("Number of Prenatal Visits")
+
+ggplot(data, aes(monpre, lbwght)) + geom_point(size = 0.25) + 
+  geom_smooth(method = "lm", se = FALSE)  +
+  ggtitle("Scatterplot of weight against \n month prenatal care began ")
 ```
 
 
 
-All in all, the number of visits follows a mostly normal curve, and the square root of the month prenatal care began follow a mostly normal curve.  Then we say smart things about how that will all relate to each other.
+All in all, the number of visits follows a mostly normal curve, and the square root of the month prenatal care began follow a mostly normal curve.  However, we can tell right now that `monpre` does not have much practical significance with respect to the baby's weight from looking at the graph.
 
 
 ### Step 3: Modeling 
@@ -169,7 +173,9 @@ However, we can get some information if we take the product of `omaps` and `fmap
 
 ```{r}
 data$product_apgarscores = data$omaps * data$fmaps
-data$normalized_product_apgar =  (data$product_apgarscores- mean(!is.na(data$product_apgarscores)))/sd(!is.na(data$product_apgarscores))
+data$normalized_product_apgar =  
+  (data$product_apgarscores - 
+     mean(!is.na(data$product_apgarscores)))/sd(!is.na(data$product_apgarscores))
 
 a8 = lm(data$normalized_product_apgar~data$monpre + data$npvis)
 a9 = lm(data$normalized_product_apgar~ data$npvis)
@@ -354,7 +360,7 @@ AIC(model3)
 AIC(c1)
 ```
 
-From the Akaike Information Criterion test, we see that `model3` is the best option for a linear model predicting the health of the baby.  Model3 has the highest adjusted R^2, showing that virutally 2% of all variability in the baby's health indicators can be determined by the months prenatal visits started, number of prenatal visits, the mother's smoking and driking habits, the mother's age, and the baby's gender.  As always, `monpre` was not a statistically significant regressor, and neither was the mother's age or drinking habits.  In words, we can say if the baby is a boy we can expect he will weigh 80.937 grams more than if he is a girl, for every year older his mother is, he will weight 5.317 grams more, for every alcoholic drink his mother inbibes per week he will weigh 14.050 grams less, for every cigarette his mother smokes per day, he will weigh 11.229 grams less, for each prenatal visit, he will weight 15.505 more, and for each month the mother waits to to start her prenatal care, the baby weight 20.901 grams more.  Just writing it out like that gives us good grounds to completely ignore the `monpre` variable.  
+From the Akaike Information Criterion test, we see that `model3` is the best option for a linear model predicting the health of the baby.  Model3 has the highest adjusted R^2, showing that virutally 2% of all variability in the baby's health indicators can be determined by the months prenatal visits started, number of prenatal visits, the mother's smoking and driking habits, the mother's age, and the baby's gender.  As always, `monpre` was not a statistically significant regressor, and neither was the mother's age or drinking habits.  In words, we can say if the baby is a boy we can expect he will weigh 80.937 grams more than if he is a girl, for every year older his mother is, he will weight 5.317 grams more, for every alcoholic drink his mother inbibes per week he will weigh 14.050 grams less, for every cigarette his mother smokes per day, he will weigh 11.229 grams less, for each prenatal visit, he will weight 15.505 more, and for each month the mother waits to to start her prenatal care, the baby weight 20.901 grams more.  Just writing it out what the model means stresses even more that we should ignore the `monpre` variable in modeling a baby's health.  
 
 \pagebreak
 
